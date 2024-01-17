@@ -1,26 +1,31 @@
 #!/usr/bin/python3
 
 """
-A module that defines a User class which inherits BaseModel
+A module that defines the ORM class for User table
 """
+from os import getenv
+from models.base_model import Base, BaseModel
+from sqlalchemy import Column, String
+from sqlalchemy.orm import relationship
 
-from models.base_model import BaseModel
 
-
-class User(BaseModel):
+class User(BaseModel, Base):
     """
-    Defines all common attribute/methods for other classes
-
-    Attr:
-        id (str)
-        created_at (datetime)
-        updated_at (datetime)
-        email (str)
-        password (str)
-        first_name (str)
-        last_name (str)
+    Defines attributes for User table
     """
-    email = ""
-    password = ""
-    first_name = ""
-    last_name = ""
+    __tablename__ = 'users'
+
+    if getenv('HBNB_TYPE_STORAGE') == 'db':
+        email = Column(String(128), nullable=False)
+        password = Column(String(128), nullable=False)
+        first_name = Column(String(128), nullable=True)
+        last_name = Column(String(128), nullable=True)
+        places = relationship(
+            'Place', backref='user', cascade='all, delete')
+        reviews = relationship(
+            'Review', backref='user', cascade='all, delete')
+    else:
+        email = ''
+        password = ''
+        first_name = ''
+        last_name = ''

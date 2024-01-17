@@ -1,69 +1,64 @@
 #!/usr/bin/python3
-"""
-A module that defines a BaseModel class
-"""
 
-import models
-from uuid import uuid4
+"""
+This module defines the base class inherited by all other ORM classes
+"""
+import uuid
 from datetime import datetime
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, String, DateTime
+
+Base = declarative_base()
 
 
 class BaseModel:
     """
-    Defines all common attribute/methods for other classes
+    A base class for all hbnb models
     """
+    id = Column(String(60), unique=True, primary_key=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow(), nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow(), nullable=False)
 
-    def __init__(self, *args, **kwargs):
-        """
-        Instantiation method for class instances
-
-        Arguments:
-            args (tuple): variadic number of positional arguments, not used
-            kwargs (dict): variadic number of key-words arguments
-        """
-        if kwargs != {} and len(kwargs) > 0:
-            for key, value in kwargs.items():
-                if key != '__class__':
-                    if key == 'created_at' or key == 'updated_at':
-                        setattr(self, key, datetime.fromisoformat(value))
-                    else:
-                        setattr(self, key, value)
-        else:
-            self.id = str(uuid4())
-            self.created_at = datetime.now()
-            self.updated_at = datetime.now()
-            """Write new obj to json file"""
-            models.storage.new(self)
-
-    def __str__(self):
-        """
-        String representation of instances
-
-        Return:
-            (str): string representation of model instance
-        """
-        return "[{0}] ({1}) {2}".format(
-            self.__class__.__name__, self.id, self.__dict__
-        )
+    def __init__(self, **kwargs):
+        """Instatntiates a new model"""
+        self.id = str(uuid.uuid4())
+        self.created_at = datetime.now()
+        self.updated_at = datetime.now()
+        if kwargs:
+            if kwargs.get('__class__', None):
+                del kwargs['__class__']
+            for k, v in kwargs.items():
+                if k == 'created_at' or k == 'updated_at':
+                    v = datetime.strptime(v, '%Y-%m-%dT%H:%M:%S.%f')
+                self.__dict__.update({k: v})
 
     def save(self):
-        """
-        Updates instance 'update_at' to the current datetime
-        """
+        """Updates updated_at with current time when instance is changed"""
+        from models import storage
         self.updated_at = datetime.now()
-        """Updates FileStorage private storage object"""
-        models.storage.new(self)
-        """Calls 'storage' save method"""
-        models.storage.save()
+        storage.new(self)
+        storage.save()
+
+    def delete(self):
+        """Deletes the current instance from storage"""
+        from models import storage
+        storage.delete(self)
 
     def to_dict(self):
-        """
-        Return:
-            (dict): a dictionary containing all
-            keys/values of __dict__ of the instance
-        """
-        dictionary = self.__dict__.copy()
+        """Convert instance into dict format"""
+        dictionary = {}
+        dictionary.update(self.__dict__)
+        dictionary.update({'__class__':
+                          (str(type(self)).split('.')[-1]).split('\'')[0]})
         dictionary['created_at'] = self.created_at.isoformat()
         dictionary['updated_at'] = self.updated_at.isoformat()
-        dictionary['__class__'] = self.__class__.__name__
+        dictionary.pop('_sa_instance_state', None)
         return dictionary
+
+    def __str__(self):
+        """Returns a string representation of the instance"""
+        attributes = {}
+        attributes.update(self.__dict__)
+        attributes.pop('_sa_instance_state', None)
+        cls = (str(type(self)).split('.')[-1]).split('\'')[0]
+        return '[{}] ({}) {}'.format(cls, self.id, attributes)

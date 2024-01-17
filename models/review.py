@@ -1,24 +1,27 @@
 #!/usr/bin/python3
 
 """
-A module that defines a Review class which inherits BaseModel
+A module that defines ORM class for Review table
 """
+from os import getenv
+from sqlalchemy import Column, ForeignKey
+from sqlalchemy import String
+from models.base_model import Base, BaseModel
 
-from models.base_model import BaseModel
 
-
-class Review(BaseModel):
+class Review(BaseModel, Base):
     """
-    Defines all common attribute/methods for other classes
-
-    Attr:
-        id (str)
-        created_at (datetime)
-        updated_at (datetime)
-        place_id (str)
-        user_id (str)
-        text (str)
+    Defines attributes for Review table
     """
-    place_id = ""
-    user_id = ""
-    text = ""
+    __tablename__ = 'reviews'
+
+    if getenv('HBNB_TYPE_STORAGE') == 'db':
+        text = Column(String(1024), nullable=False)
+        place_id = Column(
+            String(60), ForeignKey('places.id'), nullable=False)
+        user_id = Column(
+            String(60), ForeignKey('users.id'), nullable=False)
+    else:
+        text = ''
+        place_id = ''
+        user_id = ''
